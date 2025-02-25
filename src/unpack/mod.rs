@@ -113,7 +113,17 @@ fn unpack_entry(
 
             let mut gz_reader = GzDecoder::new(archive_entry);
             let mut target_file = File::create(target_file_path)?;
-            std::io::copy(&mut gz_reader, &mut target_file)?;
+
+            // JSON files are pretty-printed.
+            if non_gzip_name
+                .to_str()
+                .map_or(false, |s| s.ends_with("json"))
+            {
+                let indentation = jsonformat::Indentation::TwoSpace;
+                jsonformat::format_reader_writer(gz_reader, target_file, indentation)?;
+            } else {
+                std::io::copy(&mut gz_reader, &mut target_file)?;
+            }
         }
     } else if let Some(name) = archive_entry_path.file_name() {
         let mut target_file_path = target_folder;
